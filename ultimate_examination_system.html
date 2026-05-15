@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamsPro ULTIMATE | The Final AI-Elite Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #020617;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --secondary: #a855f7;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-main);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-glass);
+            border-radius: 28px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 16px;
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -10px var(--primary-glow);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .animate-in {
+            animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .rank-badge {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Loading States */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(.33);
+            }
+
+            80%,
+            100% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-dot {
+            0% {
+                transform: scale(.8);
+            }
+
+            50% {
+                transform: scale(1);
+            }
+
+            100% {
+                transform: scale(.8);
+            }
+        }
+
+        .ai-loading {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .ai-loading:before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: -20px;
+            width: 80px;
+            height: 80px;
+            border-radius: 45px;
+            background-color: var(--primary);
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        /* Custom UI */
+        .option-card {
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-glass);
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .option-card.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 10px 20px -5px var(--primary-glow);
+        }
+
+        .option-card.correct {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .option-card.incorrect {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback } = React;
+
+        /* --- CONFIG & API --- */
+        const API_URL = 'http://localhost:5000/api';
+
+        const apiRequest = async (endpoint, method = 'GET', body = null) => {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    ...(body && { body: JSON.stringify(body) })
+                };
+                const res = await fetch(`${API_URL}${endpoint}`, options);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.error(`API Error [${endpoint}]:`, err);
+                return null;
+            }
+        };
+
+        /* --- SHARED UI COMPONENTS --- */
+        const Loader = () => (
+            <div className="flex flex-col items-center justify-center p-20 animate-in">
+                <div className="ai-loading mb-8"></div>
+                <div className="text-xl font-bold text-gradient animate-pulse">Consulting AI Knowledge Node...</div>
+                <p className="text-slate-500 mt-2 text-sm">Building certification parameters & technical inquiries</p>
+            </div>
+        );
+
+        const Navbar = ({ view, setView, user, onLogout }) => (
+            <nav className="glass-card m-6 p-4 flex justify-between items-center sticky top-6 z-50 animate-in shadow-2xl">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('dash')}>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center font-black text-2xl text-white shadow-xl">E</div>
+                    <div>
+                        <span className="text-2xl font-black tracking-tighter">Exams<span className="text-blue-500">PRO</span></span>
+                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Ultimate Edition</div>
+                    </div>
+                </div>
+                <div className="flex gap-10 items-center font-bold text-xs uppercase tracking-widest">
+                    <button onClick={() => setView('dash')} className={`transition-all ${view === 'dash' ? 'text-blue-500' : 'text-slate-500 hover:text-white'}`}>Terminal</button>
+                    <button onClick={() => setView('rank')} className={`transition-all ${view === 'rank' ? 'text-blue-500' : 'text-slate-500 hover:text-white'}`}>Rankings</button>
+                    {user?.role === 'admin' && <button onClick={() => setView('admin')} className={`transition-all ${view === 'admin' ? 'text-blue-500' : 'text-slate-500 hover:text-white'}`}>Architect</button>}
+                    <button onClick={onLogout} className="text-slate-600 hover:text-red-500 border-l border-white/10 pl-10">Sign Out</button>
+                </div>
+            </nav>
+        );
+
+        /* --- VIEWS --- */
+        const Landing = ({ onLogin }) => {
+            const [mode, setMode] = useState(null); // 'student' or 'admin'
+            const [name, setName] = useState('');
+            const [studentClass, setStudentClass] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                const payload = {
+                    name,
+                    role: mode,
+                    email: `${name.toLowerCase().replace(/\s/g, '')}@exams.pro`,
+                    ...(mode === 'student' ? { studentClass } : { password })
+                };
+                const u = await apiRequest('/auth/login', 'POST', payload);
+                if (u && !u.error) {
+                    onLogin(u);
+                } else if (u && u.error) {
+                    alert(u.error);
+                } else {
+                    alert("System Connection Terminal Failed. Ensure Backend is active.");
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.03),transparent)]">
+                    {!mode ? (
+                        <div className="glass-card p-16 max-w-xl w-full text-center relative overflow-hidden animate-in">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+                            <div className="text-6xl mb-8">💎</div>
+                            <h1 className="text-6xl font-black mb-4 tracking-tighter">Enter the <br /><span className="text-gradient">Knowledge Grid</span></h1>
+                            <p className="text-slate-400 mb-12 text-lg leading-relaxed">The unified platform for industry-grade certifications and AI-powered assessments.</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={() => setMode('student')} className="btn-primary py-5">STUDENT ENTRY</button>
+                                <button onClick={() => setMode('admin')} className="glass-card bg-white/5 border-white/10 hover:border-white/20 py-5 font-bold uppercase text-xs tracking-widest">ADMIN PORTAL</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="glass-card p-12 max-w-md w-full animate-in relative overflow-hidden">
+                            <button onClick={() => setMode(null)} className="text-blue-500 font-bold text-[10px] uppercase tracking-widest mb-8 block">← Back to Selection</button>
+                            <h2 className="text-4xl font-black mb-8 tracking-tight">Identity <span className="text-gradient">Verification</span></h2>
+
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Full Legal Name</label>
+                                    <input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Alex Johnson" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 font-bold" />
+                                </div>
+
+                                {mode === 'student' ? (
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Academic Class</label>
+                                        <select required value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 font-bold uppercase text-xs tracking-widest">
+                                            <option value="">Select Grade</option>
+                                            <option>Grade 10</option><option>Grade 11</option><option>Grade 12</option><option>University</option>
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Security Key</label>
+                                        <input required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-slate-900 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 font-bold" />
+                                    </div>
+                                )}
+
+                                <button type="submit" disabled={loading} className="w-full btn-primary py-5 uppercase tracking-[0.2em] text-xs shadow-2xl disabled:opacity-50">
+                                    {loading ? 'Verifying...' : 'Authenticate'}
+                                </button>
+                                {mode === 'admin' && <p className="text-center text-slate-600 text-[10px] uppercase tracking-widest font-bold">Standard credentials required</p>}
+                            </form>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const Dashboard = ({ user, exams, onStartExam }) => (
+            <div className="max-w-7xl mx-auto space-y-12 animate-in pb-20">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 glass-card p-12 bg-gradient-to-br from-blue-600/10 to-transparent border-l-4 border-blue-600">
+                        <span className="text-blue-500 font-black text-xs uppercase tracking-widest mb-4 block">Candidate Profile</span>
+                        <h2 className="text-5xl font-black mb-6 tracking-tighter">Welcome, <span className="text-gradient">{user.name}</span></h2>
+                        <div className="flex gap-12 mt-12 pb-2">
+                            <div><div className="text-xs font-bold text-slate-500 uppercase mb-1">Rank</div><div className="text-3xl font-black">#12</div></div>
+                            {user.class && <div><div className="text-xs font-bold text-slate-500 uppercase mb-1">Class</div><div className="text-3xl font-black text-purple-400">{user.class}</div></div>}
+                            <div><div className="text-xs font-bold text-slate-500 uppercase mb-1">AVG Accuracy</div><div className="text-3xl font-black text-green-400">92%</div></div>
+                            <div><div className="text-xs font-bold text-slate-500 uppercase mb-1">Total Pts</div><div className="text-3xl font-black text-blue-400">4.8k</div></div>
+                        </div>
+                    </div>
+                    <div className="glass-card p-10 flex flex-col justify-between overflow-hidden relative">
+                        <div className="absolute -right-10 -bottom-10 text-9xl text-white/5 font-black">AI</div>
+                        <h3 className="font-bold text-slate-500 uppercase text-xs tracking-[0.3em] mb-8">System Status</h3>
+                        <div className="space-y-4">
+                            <div className="flex justify-between text-sm"><span className="text-slate-400">Database</span><span className="text-green-500 font-bold font-mono">ONLINE</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-slate-400">AI Core</span><span className="text-blue-500 font-bold font-mono">READY</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-slate-400">Endpoints</span><span className="text-purple-500 font-bold font-mono">SYNCED</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {exams.map(exam => (
+                        <div key={exam._id} className="glass-card p-8 group hover:shadow-2xl hover:shadow-blue-500/10">
+                            <div className="flex justify-between items-start mb-10">
+                                <div className="p-4 bg-slate-900 rounded-2xl group-hover:bg-blue-600/10 text-2xl transition-all">🎯</div>
+                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${exam.difficulty === 'Expert' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                    }`}>{exam.difficulty}</span>
+                            </div>
+                            <h4 className="text-2xl font-bold mb-3 tracking-tight h-16 line-clamp-2">{exam.title}</h4>
+                            <p className="text-slate-500 text-sm mb-10 leading-relaxed font-medium">Verify your mastery in this AI-generated {exam.difficulty} tier assessment.</p>
+                            <div className="flex items-center justify-between pt-8 border-t border-white/5">
+                                <div className="text-xs font-black text-slate-600 font-mono">{exam.duration}M • {exam.questionsCount}Q</div>
+                                <button onClick={() => onStartExam(exam)} className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent font-bold text-xs uppercase tracking-widest transition-all active:scale-95">Enter Portal</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const AIArchitect = ({ onPublish }) => {
+            const [topic, setTopic] = useState('');
+            const [count, setCount] = useState(10);
+            const [diff, setDiff] = useState('Medium');
+            const [loading, setLoading] = useState(false);
+            const [preview, setPreview] = useState(null);
+
+            const construct = async () => {
+                setLoading(true); setPreview(null);
+                const data = await apiRequest('/ai/generate', 'POST', { topic, count, difficulty: diff });
+                if (data) setPreview(data);
+                else alert("Connection Error: Is the local server running?");
+                setLoading(false);
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto space-y-10 animate-in pb-20">
+                    <div className="text-center">
+                        <h2 className="text-5xl font-black mb-4 tracking-tighter">AI <span className="text-gradient">Architect</span></h2>
+                        <p className="text-slate-500 font-medium">Generate industry-grade certification paths using elite AI models.</p>
+                    </div>
+
+                    <div className="glass-card p-12 space-y-8 shadow-2xl">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Research Topic</label>
+                                <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Distributed Systems, advanced Python, Flutter UI..." className="w-full bg-slate-900 border border-white/10 p-5 rounded-2xl outline-none focus:border-blue-500 text-xl font-bold" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Difficulty Curve</label>
+                                <select value={diff} onChange={e => setDiff(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-5 rounded-2xl outline-none focus:border-blue-500 font-bold uppercase text-xs tracking-widest">
+                                    <option>Easy</option><option>Medium</option><option>Hard</option><option>Expert</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Question Density</label>
+                                <input type="number" value={count} onChange={e => setCount(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-5 rounded-2xl outline-none font-mono text-xl" />
+                            </div>
+                        </div>
+                        <button onClick={construct} disabled={loading || !topic} className="w-full btn-primary py-6 text-lg uppercase tracking-widest disabled:opacity-30 flex items-center justify-center gap-4 shadow-2xl">
+                            {loading ? <><div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin"></div> THINKING...</> : 'CONSTRUCT ASSESSMENT'}
+                        </button>
+                    </div>
+
+                    {preview && (
+                        <div className="glass-card p-12 animate-in border-t-4 border-blue-500">
+                            <div className="flex justify-between items-center mb-10 pb-10 border-b border-white/5">
+                                <div>
+                                    <h3 className="text-3xl font-black tracking-tight">{preview.title}</h3>
+                                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-2">{preview.questionsCount} Questions • {preview.points} Global Points</p>
+                                </div>
+                                <button onClick={() => onPublish(preview)} className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-green-600/20 active:scale-95 transition-all">POST TO PUBLIC HUB</button>
+                            </div>
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-6 custom-scrollbar">
+                                {preview.questions.map((q, i) => (
+                                    <div key={i} className="p-6 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="text-blue-500 font-black text-[10px] uppercase tracking-widest mb-3"># Inquiry {i + 1}</div>
+                                        <p className="font-bold text-lg leading-relaxed">{q.q}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ExamPortal = ({ exam, onFinish }) => {
+            const [curr, setCurr] = useState(0);
+            const [ans, setAns] = useState(new Array(exam?.questionsCount || 0).fill(null));
+            const [time, setTime] = useState((exam?.duration || 0) * 60);
+
+            useEffect(() => {
+                const clock = setInterval(() => setTime(t => t > 0 ? t - 1 : 0), 1000);
+                return () => clearInterval(clock);
+            }, []);
+
+            const format = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+            const submit = () => {
+                let hits = 0; ans.forEach((a, i) => { if (a === exam.answerKey[i]) hits++; });
+                const acc = Math.round((hits / exam.questionsCount) * 100);
+                const score = acc;
+                const pts = Math.round(score * (exam.points / 100));
+
+                onFinish({ examId: exam._id, title: exam.title, acc, score, pts, answers: ans });
+            };
+
+            if (!exam?.questions || exam.questions.length === 0) {
+                return (
+                    <div className="glass-card p-20 flex flex-col items-center justify-center max-w-4xl mx-auto shadow-2xl animate-in">
+                        <div className="text-6xl mb-8">⚠️</div>
+                        <h2 className="text-3xl font-black mb-4 tracking-tighter text-gradient">Data Integrity Breach</h2>
+                        <p className="text-slate-500 mb-12 font-medium">This certification path exists but its knowledge nodes are currently offline.</p>
+                        <button onClick={() => onFinish(null)} className="btn-primary px-12 py-5 uppercase tracking-widest text-xs">Return to Hub</button>
+                    </div>
+                );
+            }
+
+            const currentQuestion = exam.questions[curr];
+
+            return (
+                <div className="max-w-7xl mx-auto py-10 grid grid-cols-1 lg:grid-cols-4 gap-8 px-6 animate-in">
+                    <div className="lg:col-span-3 space-y-8">
+                        <div className="glass-card p-12">
+                            <div className="flex justify-between items-end mb-16 pb-12 border-b border-white/5">
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] block">Inquiry Protocol {curr + 1}</span>
+                                    <h2 className="text-3xl font-black tracking-tighter">Knowledge Validation Engine</h2>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`text-5xl font-mono font-black ${time < 60 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>{format(time)}</div>
+                                    <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-2">Time Remaining</div>
+                                </div>
+                            </div>
+
+                            <p className="text-2xl font-bold leading-relaxed mb-12">{currentQuestion?.q || "Loading knowledge node..."}</p>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                {currentQuestion?.a?.map((txt, i) => (
+                                    <div key={i} onClick={() => { const next = [...ans]; next[curr] = i; setAns(next); }}
+                                        className={`option-card flex items-center group ${ans[curr] === i ? 'selected' : ''}`}>
+                                        <div className="w-10 h-10 rounded-xl bg-black/30 flex items-center justify-center mr-6 font-black font-mono">{String.fromCharCode(65 + i)}</div>
+                                        <div className="text-lg font-bold">{txt}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-between mt-16 pt-10 border-t border-white/5">
+                                <button disabled={curr === 0} onClick={() => setCurr(c => c - 1)} className="px-10 py-4 rounded-2xl bg-white/5 font-black uppercase text-xs tracking-widest disabled:opacity-10 transition-all">Back</button>
+                                <button onClick={() => curr === exam.questionsCount - 1 ? submit() : setCurr(c => c + 1)} className="px-16 py-4 btn-primary uppercase tracking-[0.2em] text-xs">
+                                    {curr === exam.questionsCount - 1 ? 'FINALIZE' : 'PROCEED'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="glass-card p-10 h-fit sticky top-32 hidden lg:block border-t-2 border-slate-700">
+                        <h4 className="font-black text-[10px] text-slate-500 uppercase tracking-widest mb-10">Neural Map</h4>
+                        <div className="grid grid-cols-4 gap-4">
+                            {ans.map((a, i) => (
+                                <button key={i} onClick={() => setCurr(i)} className={`w-full aspect-square rounded-xl border transition-all font-black font-mono text-sm ${i === curr ? 'ring-2 ring-blue-500 scale-110 shadow-lg shadow-blue-500/20' : ''} ${a !== null ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-slate-900/50 border-white/5 text-slate-700'}`}>{i + 1}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReviewPortal = ({ report, exam, onBack }) => {
+            const [idx, setIdx] = useState(0);
+            return (
+                <div className="max-w-7xl mx-auto space-y-10 animate-in pb-20 px-6">
+                    <div className="flex justify-between items-end">
+                        <div className="space-y-3">
+                            <button onClick={onBack} className="text-blue-500 font-bold text-xs uppercase tracking-[0.3em] mb-4 hover:text-white transition-all">← Back to Hub</button>
+                            <h2 className="text-5xl font-black tracking-tighter">Analysis: <span className="text-gradient">Performance Summary</span></h2>
+                        </div>
+                        <div className="glass-card px-10 py-6 flex gap-12 text-center bg-blue-600/5 border-blue-600/20">
+                            <div><div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Accuracy</div><div className="text-4xl font-black text-green-400">{report.acc}%</div></div>
+                            <div><div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Yield</div><div className="text-4xl font-black text-blue-400">+{report.pts}</div></div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <div className="lg:col-span-3 glass-card p-12">
+                            <div className="flex items-center gap-6 mb-12">
+                                <span className="px-6 py-2 bg-slate-900 border border-white/10 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Parameter {idx + 1}</span>
+                                {report.answers[idx] === exam.answerKey[idx] ? <span className="text-green-500 font-black text-xs uppercase tracking-widest">Target Secured</span> : <span className="text-red-500 font-black text-xs uppercase tracking-widest">Protocol Deviation</span>}
+                            </div>
+
+                            <h3 className="text-3xl font-bold mb-12 leading-[1.4] tracking-tight">{exam.questions[idx].q}</h3>
+
+                            <div className="grid grid-cols-1 gap-5">
+                                {exam.questions[idx].a.map((txt, i) => {
+                                    const isCorrect = exam.answerKey[idx] === i;
+                                    const isUser = report.answers[idx] === i;
+                                    let state = "";
+                                    if (isCorrect) state = "correct";
+                                    else if (isUser) state = "incorrect";
+
+                                    return (
+                                        <div key={i} className={`option-card flex items-center ${state}`}>
+                                            <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center mr-6 font-black font-mono">{String.fromCharCode(65 + i)}</div>
+                                            <div className="font-bold text-lg flex-1">{txt}</div>
+                                            {isCorrect && <span className="text-[10px] font-black uppercase text-green-500 ml-4 tracking-widest">Correct Solution</span>}
+                                            {isUser && !isCorrect && <span className="text-[10px] font-black uppercase text-red-500 ml-4 tracking-widest">Your Deviation</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-16 p-10 bg-blue-600/10 rounded-[32px] border border-blue-500/20 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-6 text-6xl opacity-10">💡</div>
+                                <div className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] mb-4">Architecture Insight</div>
+                                <p className="text-slate-300 text-lg leading-relaxed font-medium">{exam.questions[idx].explanation || "No additional rationale provided for this knowledge node."}</p>
+                            </div>
+                        </div>
+                        <div className="glass-card p-10 h-fit sticky top-32 border-t-2 border-slate-700">
+                            <h4 className="font-black text-[10px] text-slate-500 uppercase tracking-widest mb-10">Result Ledger</h4>
+                            <div className="grid grid-cols-4 gap-4">
+                                {report.answers.map((a, i) => (
+                                    <button key={i} onClick={() => setIdx(i)} className={`w-full aspect-square rounded-xl border transition-all font-black font-mono text-sm ${i === idx ? 'ring-4 ring-blue-500/20 scale-105' : ''} ${a === exam.answerKey[i] ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-500 border-red-500/30'}`}>{i + 1}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const Rankings = ({ entries }) => (
+            <div className="max-w-4xl mx-auto space-y-10 animate-in pb-20">
+                <div className="text-center mb-16">
+                    <h2 className="text-6xl font-black mb-4 tracking-tighter">Global <span className="text-gradient">Elite</span></h2>
+                    <p className="text-slate-500 font-medium">Competition drives technical mastery. Data synchronized via MongoDB Cluster.</p>
+                </div>
+
+                <div className="glass-card overflow-hidden shadow-2xl border-t-4 border-blue-600/30">
+                    <div className="divide-y divide-white/5">
+                        {entries.map((r, i) => (
+                            <div key={r.email} className="flex items-center px-10 py-8 group hover:bg-white/5 transition-all">
+                                <div className={`rank-badge mr-10 ${i === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : (i === 1 ? 'bg-slate-300 text-black' : (i === 2 ? 'bg-amber-700 text-white' : 'bg-slate-900 text-slate-400'))}`}>
+                                    {i + 1}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="font-bold text-2xl tracking-tight">{r.name}</div>
+                                    <div className="text-sm font-black text-slate-600 font-mono italic">{r.email}</div>
+                                </div>
+                                <div className="flex gap-16 text-right">
+                                    <div><div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Impact</div><div className="font-black text-green-400 text-xl font-mono">{Math.round(r.avgAccuracy)}%</div></div>
+                                    <div><div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Yield</div><div className="text-3xl font-black text-white">{r.totalPoints}</div></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+
+        /* --- FINAL COMPOSITION --- */
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('landing');
+            const [exams, setExams] = useState([]);
+            const [rankings, setRankings] = useState([]);
+            const [activeExam, setActiveExam] = useState(null);
+            const [lastReport, setLastReport] = useState(null);
+
+            const refreshData = useCallback(async () => {
+                const e = await apiRequest('/exams'); if (e) setExams(e);
+                const r = await apiRequest('/rankings'); if (r) setRankings(r);
+            }, []);
+
+            useEffect(() => { if (view !== 'landing') refreshData(); }, [view, refreshData]);
+
+            const login = (userData) => {
+                setUser(userData);
+                setView('dash');
+            };
+
+            const publish = async (exam) => {
+                const res = await apiRequest('/exams', 'POST', exam);
+                if (res) { alert('Certification Protocol Successfully Synchronized!'); setView('dash'); }
+            };
+
+            const finishExam = async (report) => {
+                await apiRequest('/results', 'POST', { userId: user._id, ...report, weightedPoints: report.pts });
+                setLastReport(report); setView('review');
+            };
+
+            if (view === 'landing') return <Landing onLogin={login} />;
+
+            return (
+                <div className="min-h-screen">
+                    <Navbar view={view} setView={setView} user={user} onLogout={() => setView('landing')} />
+                    <main className="px-6 py-6 transition-all">
+                        {view === 'dash' && <Dashboard user={user} exams={exams} onStartExam={(ex) => { setActiveExam(ex); setView('taker'); }} />}
+                        {view === 'admin' && <AIArchitect onPublish={publish} />}
+                        {view === 'rank' && <Rankings entries={rankings} />}
+                        {view === 'taker' && <ExamPortal exam={activeExam} onFinish={finishExam} />}
+                        {view === 'review' && <ReviewPortal report={lastReport} exam={activeExam} onBack={() => setView('dash')} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

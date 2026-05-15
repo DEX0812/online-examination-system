@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamsPro AI-Elite | Premium Full-Stack Examination Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #020617;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --secondary: #a855f7;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-main);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+
+        .animate-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        /* --- API CORE --- */
+        const API_URL = 'http://localhost:5000/api';
+
+        const API = {
+            async post(endpoint, body) {
+                const res = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                return await res.json();
+            },
+            async get(endpoint) {
+                const res = await fetch(`${API_URL}${endpoint}`);
+                return await res.json();
+            }
+        };
+
+        /* --- AI COMPONENT --- */
+        const AIArchitect = ({ onPublish }) => {
+            const [topic, setTopic] = useState('');
+            const [count, setCount] = useState(10);
+            const [diff, setDiff] = useState('Medium');
+            const [loading, setLoading] = useState(false);
+            const [exam, setExam] = useState(null);
+
+            const generate = async () => {
+                setLoading(true);
+                const data = await API.post('/ai/generate', { topic, count, difficulty: diff });
+                setExam(data);
+                setLoading(false);
+            };
+
+            return (
+                <div className="glass-card p-10 animate-in">
+                    <div className="flex justify-between items-center mb-10">
+                        <div>
+                            <h2 className="text-3xl font-bold">✨ AI Exam Architect</h2>
+                            <p className="text-slate-500 mt-2">Generate industry-standard certifications in seconds.</p>
+                        </div>
+                        <div className="flex gap-4">
+                            <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="Topic (e.g. Docker, Python...)" className="bg-slate-900 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 w-64" />
+                            <select value={diff} onChange={e => setDiff(e.target.value)} className="bg-slate-900 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500">
+                                <option>Easy</option><option>Medium</option><option>Hard</option><option>Expert</option>
+                            </select>
+                            <input type="number" value={count} onChange={e => setCount(e.target.value)} className="bg-slate-900 border border-white/10 p-4 rounded-xl outline-none w-20" />
+                            <button onClick={generate} disabled={loading || !topic} className="btn-primary px-8 rounded-xl font-bold disabled:opacity-50">{loading ? 'AI Thinking...' : 'CONSTRUCT'}</button>
+                        </div>
+                    </div>
+
+                    {exam && (
+                        <div className="p-8 border-2 border-dashed border-blue-500/20 rounded-3xl bg-blue-500/5 animate-in">
+                            <div className="flex justify-between items-center mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gradient">{exam.title}</h3>
+                                    <p className="text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">{exam.questionsCount} Ques • {exam.points} Points • {exam.difficulty}</p>
+                                </div>
+                                <button onClick={() => onPublish(exam)} className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-green-500/20 active:scale-95 transition-all">PUBLISH TO PUBLIC PORTAL</button>
+                            </div>
+                            <div className="space-y-4">
+                                {exam.questions.slice(0, 3).map((q, i) => (
+                                    <div key={i} className="text-sm text-slate-400 p-4 bg-black/20 rounded-xl">
+                                        <span className="text-blue-500 font-bold mr-2">#{i + 1}</span> {q.q}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        /* --- DASHBOARD & PORAL --- */
+        const Dashboard = ({ exams, onStart }) => (
+            <div className="space-y-12 animate-in max-w-6xl mx-auto">
+                <div className="glass-card p-12 bg-gradient-to-br from-purple-500/10 to-transparent relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4"><span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-500">AI Node v4.0</span></div>
+                    <h2 className="text-5xl font-bold mb-4 tracking-tighter">Your Future, <br /><span className="text-gradient">AI Powered.</span></h2>
+                    <p className="text-slate-400 text-xl max-w-2xl leading-relaxed">Experience dynamic certification tracks generated in real-time. Adaptive difficulty ensures a perfect knowledge benchmark.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {exams.map(ex => (
+                        <div key={ex._id} className="glass-card p-8 group hover:scale-[1.02] transition-all">
+                            <div className="flex justify-between mb-8">
+                                <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter ${ex.difficulty === 'Expert' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>{ex.difficulty}</span>
+                                <span className="text-slate-600 font-bold text-xs uppercase tracking-widest">{ex.duration} Mins</span>
+                            </div>
+                            <h4 className="text-2xl font-bold mb-4 w-5/6">{ex.title}</h4>
+                            <button onClick={() => onStart(ex)} className="w-full btn-primary py-4 rounded-2xl font-bold text-xs shadow-lg shadow-blue-500/10">LAUNCH ASSESSMENT</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        /* --- MAIN APP --- */
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('login');
+            const [exams, setExams] = useState([]);
+
+            useEffect(() => {
+                if (view !== 'login') API.get('/exams').then(setExams);
+            }, [view]);
+
+            const publish = async (exam) => {
+                await API.post('/exams', exam);
+                alert('Certification Track Live!');
+                setView('dash');
+            };
+
+            if (view === 'login') return (
+                <div className="flex items-center justify-center min-h-screen p-6">
+                    <div className="glass-card p-12 text-center max-w-md w-full border-t-4 border-blue-500">
+                        <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-8 flex items-center justify-center text-4xl font-bold shadow-2xl">E</div>
+                        <h1 className="text-5xl font-bold mb-4">Elite<span className="text-blue-500">AI</span></h1>
+                        <p className="text-slate-500 mb-12">Universal Examination Protocol</p>
+                        <div className="space-y-4">
+                            <button onClick={async () => { setUser(await API.post('/api/auth/login', { name: 'Admin', role: 'admin' })); setView('admin'); }} className="w-full btn-primary py-5 rounded-2xl font-bold">ADMIN CONSOLE</button>
+                            <button onClick={() => setView('dash')} className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl font-bold hover:bg-white/10">STUDENT PORTAL</button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="pb-32 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.05),transparent)]">
+                    <nav className="glass-card m-6 p-4 flex justify-between items-center sticky top-6 z-50 animate-in">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dash')}>
+                            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold">E</div>
+                            <span className="text-xl font-bold">Elite<span className="text-blue-400">AI</span></span>
+                        </div>
+                        <div className="flex gap-8 items-center font-bold text-xs uppercase tracking-widest">
+                            <button onClick={() => setView('dash')} className={view === 'dash' ? 'text-blue-400' : 'text-slate-400'}>Portal</button>
+                            <button onClick={() => setView('admin')} className={view === 'admin' ? 'text-blue-400' : 'text-slate-400'}>Architect</button>
+                            <button onClick={() => setView('login')} className="text-slate-600">Exit</button>
+                        </div>
+                    </nav>
+                    <main className="px-6">
+                        {view === 'dash' && <Dashboard exams={exams} onStart={() => alert('Launching AI-Generated Exam...')} />}
+                        {view === 'admin' && <AIArchitect onPublish={publish} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamsPro Enterprise v2.0 | Advanced Examination Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #020617;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --secondary: #a855f7;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-main);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+
+        .animate-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom UI Elements */
+        .rank-badge {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 800;
+        }
+
+        .success-glow {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .danger-glow {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        /* --- ADVANCED DATA CORE --- */
+        const DB = {
+            keys: { EXAMS: 'ep_v2_exams', RESULTS: 'ep_v2_results', USER: 'ep_v2_user' },
+            init: () => {
+                if (!localStorage.getItem(DB.keys.EXAMS)) {
+                    const seedExams = [
+                        { id: 1, title: 'Quantum Computing Foundations', dur: 45, ques: 10, diff: 'Hard', pts: 200, key: [1, 0, 2, 3, 1, 0, 2, 2, 1, 3] },
+                        { id: 2, title: 'AI Ethics & Governance', dur: 30, ques: 5, diff: 'Medium', pts: 100, key: [0, 2, 3, 1, 0] },
+                        { id: 3, title: 'Professional Web Security', dur: 60, ques: 8, diff: 'Expert', pts: 250, key: [3, 1, 0, 2, 1, 3, 0, 2] }
+                    ];
+                    localStorage.setItem(DB.keys.EXAMS, JSON.stringify(seedExams));
+                }
+                if (!localStorage.getItem(DB.keys.RESULTS)) {
+                    // Seed some initial rankings
+                    const seedResults = [
+                        { id: 'r1', uName: 'Elena Vance', uEmail: 'elena@vance.io', score: 92, acc: 90, pts: 184, exTitle: 'Quantum Computing' },
+                        { id: 'r2', uName: 'Gordon Freeman', uEmail: 'gman@blackmesa.com', score: 100, acc: 100, pts: 250, exTitle: 'Professional Web Security' },
+                        { id: 'r3', uName: 'Chell Johnson', uEmail: 'chell@aperture.com', score: 85, acc: 80, pts: 85, exTitle: 'AI Ethics' }
+                    ];
+                    localStorage.setItem(DB.keys.RESULTS, JSON.stringify(seedResults));
+                }
+            },
+            get: (key) => JSON.parse(localStorage.getItem(key) || '[]'),
+            save: (key, data) => localStorage.setItem(key, JSON.stringify(data)),
+            submit: (sub) => {
+                const res = DB.get(DB.keys.RESULTS);
+                res.push({ ...sub, id: Date.now() });
+                DB.save(DB.keys.RESULTS, res);
+            }
+        };
+
+        /* --- GUI COMPONENTS --- */
+        const Navbar = ({ view, setView, user, onLogout }) => (
+            <nav className="glass-card m-6 p-4 flex justify-between items-center sticky top-6 z-50 animate-in">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dash')}>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">E</div>
+                    <span className="text-2xl font-bold tracking-tight">Exams<span className="text-blue-400">Pro</span></span>
+                </div>
+                <div className="flex gap-8 items-center font-bold text-sm uppercase tracking-wider">
+                    <button onClick={() => setView('dash')} className={`transition-all ${view === 'dash' ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}>Portal</button>
+                    <button onClick={() => setView('rank')} className={`transition-all ${view === 'rank' ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}>Rankings</button>
+                    {user?.isAdmin && <button onClick={() => setView('admin')} className={`transition-all ${view === 'admin' ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}>Management</button>}
+                    <button onClick={onLogout} className="text-slate-500 hover:text-red-400">Exit</button>
+                </div>
+            </nav>
+        );
+
+        const Dashboard = ({ onStartExam }) => {
+            const exams = DB.get(DB.keys.EXAMS);
+            const results = DB.get(DB.keys.RESULTS);
+            return (
+                <div className="space-y-12 animate-in max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 glass-card p-10 bg-gradient-to-br from-blue-500/10 to-transparent">
+                            <h2 className="text-4xl font-bold mb-4">Master Your <span className="text-gradient">Certifications</span></h2>
+                            <p className="text-slate-400 text-lg leading-relaxed mb-8">Choose a domain, complete the assessment, and climb the global leaderboard. Detailed answer keys provided after every exam.</p>
+                            <div className="flex gap-6">
+                                <div className="p-4 bg-white/5 rounded-2xl">
+                                    <div className="text-xs font-bold text-slate-500 uppercase mb-1">Recent Accuracy</div>
+                                    <div className="text-xl font-bold text-green-400">88.4%</div>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-2xl">
+                                    <div className="text-xs font-bold text-slate-500 uppercase mb-1">Global Percentile</div>
+                                    <div className="text-xl font-bold text-purple-400">Top 12%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="glass-card p-8 flex flex-col justify-between">
+                            <h3 className="font-bold text-slate-500 uppercase text-xs tracking-widest mb-6">Recent Performance</h3>
+                            {results.slice(-2).map(r => (
+                                <div key={r.id} className="mb-4 last:mb-0">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-bold text-sm truncate w-32">{r.exTitle}</span>
+                                        <span className="text-xs font-bold text-blue-400">+{r.pts} Pts</span>
+                                    </div>
+                                    <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-blue-600 h-full" style={{ width: `${r.score}%` }}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {exams.map(ex => (
+                            <div key={ex.id} className="glass-card p-8 group hover:border-blue-500/50 hover:bg-white/5">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="text-3xl p-4 bg-slate-900 rounded-2xl group-hover:bg-blue-600/10 transition-colors">🎯</div>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20`}>{ex.diff}</span>
+                                </div>
+                                <h4 className="text-2xl font-bold mb-3">{ex.title}</h4>
+                                <p className="text-slate-500 text-sm mb-8">{ex.ques} Multi-choice questions representing the latest industry standards.</p>
+                                <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
+                                    <span className="text-xs font-bold text-slate-500">{ex.dur} MINS</span>
+                                    <button onClick={() => onStartExam(ex)} className="px-6 py-2 rounded-xl bg-white/5 hover:bg-blue-600 font-bold text-xs transition-all border border-white/10 hover:border-transparent">ACCESS PORTAL</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const Rankings = () => {
+            const results = DB.get(DB.keys.RESULTS);
+            const rankings = useMemo(() => {
+                const users = {};
+                results.forEach(r => {
+                    if (!users[r.uEmail]) users[r.uEmail] = { name: r.uName, email: r.uEmail, pts: 0, acc: 0, count: 0 };
+                    users[r.uEmail].pts += r.pts;
+                    users[r.uEmail].acc = (users[r.uEmail].acc * users[r.uEmail].count + r.acc) / (users[r.uEmail].count + 1);
+                    users[r.uEmail].count++;
+                });
+                return Object.values(users).sort((a, b) => b.pts - a.pts);
+            }, [results]);
+
+            return (
+                <div className="max-w-4xl mx-auto space-y-8 animate-in">
+                    <div className="text-center mb-16">
+                        <h2 className="text-5xl font-bold mb-4">Elite <span className="text-gradient">Rankings</span></h2>
+                        <p className="text-slate-500 font-medium">Competition breeds excellence. See where you stand among the best.</p>
+                    </div>
+
+                    <div className="glass-card p-6 divide-y divide-white/5">
+                        {rankings.map((r, i) => (
+                            <div key={r.email} className="flex items-center py-6 group first:pt-0 last:pb-0">
+                                <div className={`rank-badge mr-8 ${i === 0 ? 'bg-yellow-500 text-black' : (i === 1 ? 'bg-slate-300 text-black' : (i === 2 ? 'bg-orange-600 text-white' : 'bg-slate-900 text-slate-400'))}`}>
+                                    {i + 1}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="font-bold text-xl">{r.name}</div>
+                                    <div className="text-sm text-slate-500">{r.email}</div>
+                                </div>
+                                <div className="flex gap-12 text-center">
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Accuracy</div>
+                                        <div className="font-bold text-green-400">{Math.round(r.acc)}%</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Score</div>
+                                        <div className="text-xl font-bold text-white">{r.pts}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const ExamTaker = ({ exam, user, onFinish }) => {
+            const [curr, setCurr] = useState(0);
+            const [ans, setAns] = useState(new Array(exam.ques).fill(null));
+            const [time, setTime] = useState(exam.dur * 60);
+
+            useEffect(() => {
+                const t = setInterval(() => setTime(prev => prev > 0 ? prev - 1 : 0), 1000);
+                return () => clearInterval(t);
+            }, []);
+
+            const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+            const submit = () => {
+                let correct = 0;
+                ans.forEach((a, i) => { if (a === exam.key[i]) correct++; });
+                const acc = (correct / exam.ques) * 100;
+                const score = Math.round(acc);
+                const weight = exam.pts / 100;
+                const pts = Math.round(score * weight);
+
+                const report = {
+                    uName: user.name, uEmail: user.email,
+                    acc, score, pts, exTitle: exam.title,
+                    examId: exam.id, answers: ans,
+                    timeSpent: (exam.dur * 60) - time
+                };
+                DB.submit(report);
+                onFinish(report);
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto py-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-3 space-y-6">
+                        <div className="glass-card p-10">
+                            <div className="flex justify-between items-center mb-10 pb-10 border-b border-white/5">
+                                <div>
+                                    <span className="text-blue-400 font-bold uppercase tracking-widest text-xs">Question {curr + 1} of {exam.ques}</span>
+                                    <h2 className="text-2xl font-bold mt-2">Professional Knowledge Challenge {curr + 1}</h2>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`text-4xl font-mono font-bold ${time < 60 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`}>{formatTime(time)}</div>
+                                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Remaining</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {[0, 1, 2, 3].map(i => (
+                                    <button key={i} onClick={() => { const n = [...ans]; n[curr] = i; setAns(n); }}
+                                        className={`w-full text-left p-6 rounded-2xl border transition-all duration-300 ${ans[curr] === i ? 'bg-blue-600 border-blue-400 shadow-xl' : 'bg-white/5 border-white/5 hover:border-white/20'}`}>
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center mr-6 font-bold">{String.fromCharCode(65 + i)}</div>
+                                            <span className="font-bold text-lg">Knowledge Validation Parameter {i + 1}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-between mt-12 pt-8 border-t border-white/5">
+                                <button disabled={curr === 0} onClick={() => setCurr(c => c - 1)} className="px-8 py-3 rounded-xl bg-white/5 text-slate-400 disabled:opacity-20 font-bold">PREVIOUS</button>
+                                <button onClick={() => curr === exam.ques - 1 ? submit() : setCurr(c => c + 1)} className="px-10 py-3 rounded-xl bg-blue-600 font-bold shadow-lg hover:bg-blue-500">{curr === exam.ques - 1 ? 'TERMINATE & EVALUATE' : 'SAVE & PROCEED'}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="glass-card p-8 h-fit hidden lg:block">
+                        <h4 className="font-bold text-xs text-slate-500 uppercase tracking-widest mb-6">Interaction Ledger</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                            {ans.map((a, i) => (
+                                <button key={i} onClick={() => setCurr(i)} className={`w-full aspect-square rounded-xl border transition-all font-bold text-xs ${i === curr ? 'ring-2 ring-blue-400' : ''} ${a !== null ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-900 border-white/5 text-slate-700'}`}>{i + 1}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReviewKeys = ({ report, onBack }) => {
+            const [idx, setIdx] = useState(0);
+            const exam = DB.get(DB.keys.EXAMS).find(e => e.id === report.examId);
+
+            return (
+                <div className="max-w-6xl mx-auto space-y-8 animate-in">
+                    <div className="flex justify-between items-end">
+                        <div className="space-y-2">
+                            <button onClick={onBack} className="text-blue-500 font-bold text-sm uppercase mb-4 tracking-widest hover:text-blue-400">← Return to Portal</button>
+                            <h2 className="text-4xl font-bold">Review: <span className="text-gradient">{report.exTitle}</span></h2>
+                        </div>
+                        <div className="glass-card px-8 py-4 flex gap-12 text-center">
+                            <div><div className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-1">Final Score</div><div className="text-2xl font-bold">{report.score}%</div></div>
+                            <div><div className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-1">Points Gained</div><div className="text-2xl font-bold text-blue-400">+{report.pts}</div></div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <div className="lg:col-span-3 glass-card p-10">
+                            <div className="flex items-center gap-4 mb-8">
+                                <span className="px-4 py-1.5 bg-slate-900 rounded-full text-xs font-bold text-slate-400 uppercase tracking-tighter">Validation Path {idx + 1}</span>
+                                {report.answers[idx] === exam.key[idx] ? <span className="text-green-400 font-bold text-sm uppercase">Correct Precision</span> : <span className="text-red-400 font-bold text-sm uppercase">Knowledge Gap Identified</span>}
+                            </div>
+
+                            <h3 className="text-2xl font-bold mb-10 leading-relaxed">Detailed technical inquiry regarding industry standards and specialized knowledge assessment protocols for certification {idx + 1}?</h3>
+
+                            <div className="space-y-4">
+                                {[0, 1, 2, 3].map(i => {
+                                    const isCorrect = exam.key[idx] === i;
+                                    const isUser = report.answers[idx] === i;
+                                    let cls = "bg-white/5 border-white/5 text-slate-500";
+                                    if (isCorrect) cls = "bg-green-500/10 border-green-500/40 text-green-400 success-glow";
+                                    else if (isUser) cls = "bg-red-500/10 border-red-500/40 text-red-400 danger-glow";
+
+                                    return (
+                                        <div key={i} className={`p-6 rounded-2xl border transition-all ${cls}`}>
+                                            <div className="flex items-center">
+                                                <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center mr-6 font-bold">{String.fromCharCode(65 + i)}</div>
+                                                <div className="font-bold flex-1">Knowledge Definition Option {i + 1}</div>
+                                                {isCorrect && <span className="text-[10px] font-bold uppercase bg-green-500 text-black px-3 py-1 rounded-full shadow-lg">Correct Path</span>}
+                                                {isUser && !isCorrect && <span className="text-[10px] font-bold uppercase bg-red-500 text-white px-3 py-1 rounded-full shadow-lg">Your Input</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-12 p-8 bg-blue-500/5 rounded-3xl border border-blue-500/10">
+                                <div className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em] mb-3">Pedagogical Rationale</div>
+                                <p className="text-slate-400 leading-relaxed">Technical implementation details ensure the secure execution of system protocols. Industry best practices dictate this approach for maximum scalability and structural integrity. Reference: ISO/Certified-Knowledge-0{idx + 1}.</p>
+                            </div>
+                        </div>
+                        <div className="glass-card p-8 h-fit sticky top-28">
+                            <h4 className="font-bold text-xs text-slate-500 uppercase tracking-widest mb-6">Answer Key Ledger</h4>
+                            <div className="grid grid-cols-4 gap-3">
+                                {report.answers.map((a, i) => (
+                                    <button key={i} onClick={() => setIdx(i)} className={`w-full aspect-square rounded-xl border transition-all font-bold text-xs ${i === idx ? 'ring-4 ring-blue-500/20 scale-105' : ''} ${a === exam.key[i] ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>{i + 1}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const Login = ({ onLogin }) => (
+            <div className="min-h-screen flex items-center justify-center animate-in px-6">
+                <div className="glass-card p-12 max-w-lg w-full text-center relative overflow-hidden group">
+                    <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[100px] group-hover:bg-blue-600/20 transition-all duration-1000"></div>
+                    <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl mx-auto mb-10 flex items-center justify-center text-5xl font-bold shadow-2xl">E</div>
+                    <h1 className="text-6xl font-black mb-4 tracking-tighter">Exams<span className="text-gradient">Pro</span></h1>
+                    <p className="text-slate-500 mb-12 text-lg font-medium leading-tight px-4">Global Hub for Career-Defining Knowledge Assessment and Certification Tracking.</p>
+                    <div className="space-y-4">
+                        <button onClick={() => onLogin(false)} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg active:scale-95">PROFESSIONAL ENTRY</button>
+                        <button onClick={() => onLogin(true)} className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all">SYSTEM ADMINISTRATOR</button>
+                    </div>
+                    <div className="mt-12 pt-8 border-t border-white/5 flex justify-center gap-8 grayscale opacity-50">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">ISO 27001</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">GDPR COMPLIANT</span>
+                    </div>
+                </div>
+            </div>
+        );
+
+        /* --- FINAL INTEGRATOR --- */
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('login');
+            const [examData, setExamData] = useState(null);
+            const [lastReport, setLastReport] = useState(null);
+
+            useEffect(() => DB.init(), []);
+
+            const login = (isAdmin) => {
+                const u = { name: isAdmin ? 'Admin Root' : 'Senior Candidate', email: isAdmin ? 'root@exampro.com' : 'candidate.01@dev.io', isAdmin };
+                setUser(u); setView('dash');
+            };
+
+            const logout = () => { setUser(null); setView('login'); };
+
+            if (view === 'login') return <Login onLogin={login} />;
+
+            return (
+                <div className="pb-32 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.05),transparent)] min-h-screen">
+                    <Navbar view={view} setView={setView} user={user} onLogout={logout} />
+                    <main className="px-6">
+                        {view === 'dash' && <Dashboard onStartExam={(ex) => { setExamData(ex); setView('taker'); }} />}
+                        {view === 'rank' && <Rankings />}
+                        {view === 'taker' && <ExamTaker exam={examData} user={user} onFinish={(rep) => { setLastReport(rep); setView('review'); }} />}
+                        {view === 'review' && <ReviewKeys report={lastReport} onBack={() => setView('dash')} />}
+                        {view === 'admin' && (
+                            <div className="text-center py-20 animate-in">
+                                <div className="text-8xl mb-8">🛠️</div>
+                                <h1 className="text-5xl font-bold mb-4">Admin Control System</h1>
+                                <p className="text-slate-500 max-w-lg mx-auto">This portal allows for direct management of exam parameters, answer keys, and student credentials. Use with caution.</p>
+                                <button onClick={() => setView('dash')} className="mt-10 btn-primary px-12 py-4 rounded-2xl">Return to Portal</button>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

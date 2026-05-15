@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exams Pro | Online Examination System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .exam-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.3);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .transition-all-300 {
+            transition: all 0.3s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [view, setView] = useState('landing');
+            const [currentExam, setCurrentExam] = useState(null);
+            const [score, setScore] = useState(null);
+
+            const exams = [
+                { id: 1, title: 'Web Development Basics', duration: 30, questions: 20, difficulty: 'Easy', icon: '🌐' },
+                { id: 2, title: 'Data Structures & Algorithms', duration: 60, questions: 40, difficulty: 'Medium', icon: '🧠' },
+                { id: 3, title: 'Cloud Architecture', duration: 45, questions: 30, difficulty: 'Hard', icon: '☁️' }
+            ];
+
+            const handleStartExam = (exam) => {
+                setCurrentExam(exam);
+                setView('exam');
+            };
+
+            const handleFinishExam = (results) => {
+                setScore(results);
+                setView('result');
+            };
+
+            return (
+                <div className="relative">
+                    {/* Background Orbs */}
+                    <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+                        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]"></div>
+                    </div>
+
+                    <Navbar setView={setView} />
+
+                    <main className="container mx-auto px-6 py-8">
+                        {view === 'landing' && <LandingView setView={setView} />}
+                        {view === 'exams' && <ExamsView exams={exams} onStart={handleStartExam} />}
+                        {view === 'exam' && <ExamTaker exam={currentExam} onFinish={handleFinishExam} />}
+                        {view === 'result' && <ResultView score={score} setView={setView} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const Navbar = ({ setView }) => (
+            <nav className="sticky top-4 z-50 mx-6">
+                <div className="glass px-8 py-4 rounded-2xl flex justify-between items-center">
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('landing')}>
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold">E</div>
+                        <span className="text-xl font-bold tracking-tight">Exams<span className="text-blue-400">Pro</span></span>
+                    </div>
+                    <div className="flex gap-8 items-center">
+                        <button onClick={() => setView('landing')} className="hover:text-blue-400 transition-colors">Home</button>
+                        <button onClick={() => setView('exams')} className="hover:text-blue-400 transition-colors">Exams</button>
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-95">Login</button>
+                    </div>
+                </div>
+            </nav>
+        );
+
+        const LandingView = ({ setView }) => (
+            <div className="flex flex-col items-center text-center py-20 lg:py-32">
+                <div className="inline-block px-4 py-1.5 mb-6 rounded-full glass text-sm font-medium text-blue-300">
+                    ✨ Now with AI-Powered Proctoring
+                </div>
+                <h1 className="text-5xl lg:text-7xl font-bold mb-8 leading-tight">
+                    Next Generation <br /><span className="text-gradient">Examination Platform</span>
+                </h1>
+                <p className="text-slate-400 text-lg lg:text-xl max-w-2xl mb-12 leading-relaxed">
+                    A secure, professional, and beautiful environment for your academic and corporate testing needs. Get instant feedback and deep analysis.
+                </p>
+                <div className="flex flex-wrap justify-center gap-6">
+                    <button
+                        onClick={() => setView('exams')}
+                        className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-blue-50 transition-all shadow-xl active:scale-95"
+                    >
+                        Browse Exams
+                    </button>
+                    <button className="glass px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/5 transition-all active:scale-95">
+                        Watch Demo
+                    </button>
+                </div>
+            </div>
+        );
+
+        const ExamsView = ({ exams, onStart }) => (
+            <div className="py-10">
+                <div className="mb-12">
+                    <h2 className="text-3xl font-bold mb-3">Available Examinations</h2>
+                    <p className="text-slate-400">Choose a category and start your assessment</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {exams.map(exam => (
+                        <div key={exam.id} className="glass p-8 rounded-3xl exam-card transition-all-300 group">
+                            <div className="text-4xl mb-6 bg-slate-800/50 w-16 h-16 flex items-center justify-center rounded-2xl group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-colors">
+                                {exam.icon}
+                            </div>
+                            <h3 className="text-2xl font-bold mb-4">{exam.title}</h3>
+                            <div className="flex flex-wrap gap-4 mb-8">
+                                <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">{exam.duration} Min</span>
+                                <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full">{exam.questions} Questions</span>
+                                <span className="text-sm bg-slate-800 text-slate-400 px-3 py-1 rounded-full">{exam.difficulty}</span>
+                            </div>
+                            <button
+                                onClick={() => onStart(exam)}
+                                className="w-full py-4 rounded-2xl bg-white/5 hover:bg-blue-600 hover:text-white font-semibold transition-all-300 border border-white/10 hover:border-transparent"
+                            >
+                                Start Assessment
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const ExamTaker = ({ exam, onFinish }) => {
+            const [currentIdx, setCurrentIdx] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(exam.duration * 60);
+            const [answers, setAnswers] = useState(new Array(exam.questions).fill(null));
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const mockQuestions = [
+                { q: "What is the primary purpose of a 'Virtual DOM'?", a: ["Speed up transitions", "Minimize actual DOM updates", "Enable mobile support", "Database sync"], correct: 1 },
+                { q: "Which of these is NOT a React Hook?", a: ["useState", "useEffect", "useRouter", "useMemo"], correct: 2 },
+                { q: "What does JSX stand for?", a: ["JavaScript XML", "JSON Extension", "JavaScript Xerox", "Java Syntax Extension"], correct: 0 }
+            ];
+
+            const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+            return (
+                <div className="py-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-3">
+                        <div className="glass p-10 rounded-3xl mb-8">
+                            <div className="flex justify-between items-center mb-8 pb-8 border-border border-b border-white/10">
+                                <div>
+                                    <span className="text-blue-400 font-bold uppercase tracking-wider text-sm">Question {currentIdx + 1} of {exam.questions}</span>
+                                    <h2 className="text-2xl font-bold mt-2">{mockQuestions[currentIdx % mockQuestions.length].q}</h2>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-mono font-bold text-red-400">{formatTime(timeLeft)}</div>
+                                    <div className="text-xs text-slate-500 uppercase">Time Remaining</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {mockQuestions[currentIdx % mockQuestions.length].a.map((option, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            const newAns = [...answers];
+                                            newAns[currentIdx] = idx;
+                                            setAnswers(newAns);
+                                        }}
+                                        className={`w-full text-left p-6 rounded-2xl border transition-all-300 ${answers[currentIdx] === idx ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-transparent border-white/10 hover:border-white/30 text-slate-300'}`}
+                                    >
+                                        <div className="flex items-center">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-4 ${answers[currentIdx] === idx ? 'bg-white/20' : 'bg-white/5'}`}>
+                                                {String.fromCharCode(65 + idx)}
+                                            </div>
+                                            <span className="font-medium">{option}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-between mt-12 pt-8 border-t border-white/10">
+                                <button
+                                    disabled={currentIdx === 0}
+                                    onClick={() => setCurrentIdx(prev => prev - 1)}
+                                    className="px-8 py-3 rounded-xl glass disabled:opacity-30"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    onClick={() => currentIdx === exam.questions - 1 ? onFinish({ score: 85, correct: 17, total: 20 }) : setCurrentIdx(prev => prev + 1)}
+                                    className="px-10 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 font-bold"
+                                >
+                                    {currentIdx === exam.questions - 1 ? 'Submit Exam' : 'Next Question'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-1">
+                        <div className="glass p-8 rounded-3xl sticky top-28">
+                            <h3 className="font-bold mb-6">Question Palette</h3>
+                            <div className="grid grid-cols-5 gap-3">
+                                {answers.map((ans, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setCurrentIdx(i)}
+                                        className={`w-full aspect-square rounded-xl text-xs font-bold transition-all ${i === currentIdx ? 'ring-2 ring-blue-400' : ''} ${ans !== null ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 text-slate-500 border border-white/5'}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ResultView = ({ score, setView }) => (
+            <div className="max-w-2xl mx-auto py-20 text-center">
+                <div className="w-32 h-32 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center text-6xl mx-auto mb-8 shadow-2xl shadow-green-500/20">
+                    ✓
+                </div>
+                <h2 className="text-4xl font-bold mb-4">Exam Completed!</h2>
+                <div className="glass p-10 rounded-3xl mb-10">
+                    <div className="grid grid-cols-2 gap-8">
+                        <div>
+                            <div className="text-5xl font-bold text-gradient mb-1">{score.score}%</div>
+                            <div className="text-slate-500 uppercase text-xs tracking-widest font-bold">Overall Score</div>
+                        </div>
+                        <div>
+                            <div className="text-5xl font-bold text-slate-200 mb-1">{score.correct}/{score.total}</div>
+                            <div className="text-slate-500 uppercase text-xs tracking-widest font-bold">Accuracy</div>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setView('landing')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-2xl font-bold shadow-xl transition-all active:scale-95"
+                >
+                    Back to Dashboard
+                </button>
+            </div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

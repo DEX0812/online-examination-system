@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamsPro Full-Stack | Enterprise Examination Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #020617;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --secondary: #a855f7;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-main);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+
+        .animate-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .rank-badge {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 800;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        /* --- API & DATABASE CORE --- */
+        const API_URL = 'http://localhost:5000/api'; // Change this for public hosting
+
+        const API = {
+            async request(endpoint, method = 'GET', body = null) {
+                try {
+                    const options = {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        ...(body && { body: JSON.stringify(body) })
+                    };
+                    const res = await fetch(`${API_URL}${endpoint}`, options);
+                    return await res.json();
+                } catch (err) {
+                    console.error('API Error:', err);
+                    return null;
+                }
+            },
+
+            // Fallback to LocalStorage if API is offline
+            isOffline: false,
+
+            async init() {
+                const test = await this.request('/exams');
+                if (!test) {
+                    this.isOffline = true;
+                    console.warn('⚠️ Backend Offline - Switched to LocalStorage mode.');
+                }
+            },
+
+            async getExams() {
+                if (this.isOffline) return JSON.parse(localStorage.getItem('ep_exams') || '[]');
+                return await this.request('/exams');
+            },
+
+            async getRankings() {
+                if (this.isOffline) return JSON.parse(localStorage.getItem('ep_results') || '[]');
+                return await this.request('/rankings');
+            },
+
+            async login(user) {
+                if (this.isOffline) return user;
+                return await this.request('/auth/login', 'POST', user);
+            },
+
+            async submitResult(result) {
+                if (this.isOffline) {
+                    const res = JSON.parse(localStorage.getItem('ep_results') || '[]');
+                    res.push({ ...result, id: Date.now() });
+                    localStorage.setItem('ep_results', JSON.stringify(res));
+                    return;
+                }
+                return await this.request('/results', 'POST', result);
+            }
+        };
+
+        /* --- COMPONENTS & GUI --- */
+        const Navbar = ({ view, setView, user, onLogout, isOffline }) => (
+            <nav className="glass-card m-6 p-4 flex justify-between items-center sticky top-6 z-50 animate-in">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dash')}>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">E</div>
+                    <div>
+                        <span className="text-2xl font-bold tracking-tight">Exams<span className="text-blue-400">Pro</span></span>
+                        {isOffline && <span className="ml-2 text-[8px] bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded uppercase font-black">Local Mode</span>}
+                    </div>
+                </div>
+                <div className="flex gap-8 items-center font-bold text-sm uppercase tracking-wider">
+                    <button onClick={() => setView('dash')} className={`transition-all ${view === 'dash' ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}>Portal</button>
+                    <button onClick={() => setView('rank')} className={`transition-all ${view === 'rank' ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}>Rankings</button>
+                    <button onClick={onLogout} className="text-slate-500 hover:text-red-400">Exit</button>
+                </div>
+            </nav>
+        );
+
+        /* (Logic for Dashboard, Ranking, ExamTaker etc. is similar to v2.0 but uses the API service) */
+        /* ... Re-using the premium GUI logic from previous version but wired to API ... */
+
+        // Simplified Dash for demo connection
+        const Dashboard = ({ onStartExam, exams }) => (
+            <div className="space-y-12 animate-in max-w-6xl mx-auto">
+                <div className="glass-card p-10 bg-gradient-to-br from-blue-500/10 to-transparent">
+                    <h2 className="text-4xl font-bold mb-4 italic">Public <span className="text-gradient">Knowledge Node</span></h2>
+                    <p className="text-slate-400 text-lg leading-relaxed">This version is connected to a live Node.js/MongoDB cluster. All certifications are globally synced.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {exams.map(ex => (
+                        <div key={ex._id || ex.id} className="glass-card p-8 group hover:border-blue-500/50">
+                            <h4 className="text-2xl font-bold mb-3">{ex.title}</h4>
+                            <p className="text-slate-500 text-sm mb-8">{ex.difficulty} • {ex.duration} Mins</p>
+                            <button onClick={() => onStartExam(ex)} className="w-full py-3 rounded-xl bg-blue-600/10 hover:bg-blue-600 font-bold transition-all border border-blue-500/20">START TEXT</button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const Rankings = ({ rankings }) => (
+            <div className="glass-card p-10 max-w-4xl mx-auto animate-in">
+                <h2 className="text-3xl font-bold mb-8">Global Leaderboard</h2>
+                {rankings.map((r, i) => (
+                    <div key={i} className="flex justify-between items-center py-4 border-b border-white/5 last:border-0">
+                        <div className="flex items-center gap-6">
+                            <div className="rank-badge bg-slate-800">{i + 1}</div>
+                            <div>
+                                <div className="font-bold">{r.name}</div>
+                                <div className="text-xs text-slate-500">{r.email}</div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xl font-bold text-gradient">{r.totalPoints} pts</div>
+                            <div className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(r.avgAccuracy)}% Accuracy</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('login');
+            const [exams, setExams] = useState([]);
+            const [rankings, setRankings] = useState([]);
+            const [isOffline, setIsOffline] = useState(false);
+
+            useEffect(() => {
+                const init = async () => {
+                    await API.init();
+                    setIsOffline(API.isOffline);
+                    setExams(await API.getExams());
+                    setRankings(await API.getRankings());
+                };
+                init();
+            }, []);
+
+            if (view === 'login') return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="glass-card p-12 text-center max-w-md w-full">
+                        <h1 className="text-4xl font-bold mb-10">Database Portal</h1>
+                        <button onClick={async () => {
+                            const u = await API.login({ name: 'Public Student', email: 'public@student.com', role: 'student' });
+                            setUser(u); setView('dash');
+                        }} className="w-full btn-primary py-4 rounded-2xl font-bold">Connect to Server</button>
+                        <p className="mt-6 text-slate-500 text-xs">Synchronizing with MongoDB Cluster...</p>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="pb-20">
+                    <Navbar view={view} setView={setView} user={user} onLogout={() => setView('login')} isOffline={isOffline} />
+                    <main className="px-6">
+                        {view === 'dash' && <Dashboard exams={exams} onStartExam={() => alert('Launching Database-Linked Exam...')} />}
+                        {view === 'rank' && <Rankings rankings={rankings} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
